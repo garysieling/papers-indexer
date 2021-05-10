@@ -2,6 +2,7 @@ const fs = require('fs');
 const { exec } = require('child_process');
 const $ = require('cheerio');
 const md5 = require('md5');
+const url = require('url');
 
 async function GetTextFromPDF(path) {
     let doc = await pdfjsLib.getDocument(path).promise;
@@ -57,6 +58,8 @@ const memoizeHttp = (url) => {
     const destination = 'files/' + folder + '/' + file;
 
     if (!fs.existsSync(destination)) {
+        console.log('Getting ' + destination);
+        
         const command = `curl -o ${destination} ${url}`; 
 
         exec(command, (error, stdout, stderr) => {
@@ -78,13 +81,32 @@ const memoizeHttp = (url) => {
         console.log('Already exists: ' + destination);
     }
 
-    return 'files/' + folder + '/' + file;
+    return [url, 'files/' + folder + '/' + file];
 }
 
 const rootFiles = roots.map(
     memoizeHttp
 ).filter(
     (f) => !!f
+);
+
+function resolve(from, to) {
+    const resolvedUrl = new URL(to, new URL(from, 'resolve://'));
+    if (resolvedUrl.protocol === 'resolve:') {
+      // `from` is a relative URL.
+      const { pathname, search, hash } = resolvedUrl;
+      return pathname + search + hash;
+    }
+    return resolvedUrl.toString();
+  }
+  
+const conferences = rootFiles.map(
+    ([url, file]) =>
+        [url, $.load(fs.readFileSync(file))('.conference a').attr('href')]
+).map(
+    ([url, dest]) => resolve(url, dest)
+).map(
+    memoizeHttp
 );
 
 console.log('Found: ' + rootFiles);
