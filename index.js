@@ -35,7 +35,8 @@ let requestLimit = 5;
 
 const memoizeHttp = (url) => {
     if (requestLimit <= 0) {
-        throw 'No more requests';
+        console.log('No more requests');
+        return null;
     }
 
     const code = md5(url);
@@ -47,7 +48,7 @@ const memoizeHttp = (url) => {
             'html';
    
 
-    const file = code.substr(4) + extension;
+    const file = code.substr(4) + '.' + extension;
 
     if (!fs.existsSync('files/' + folder)) {
         fs.mkdirSync('files/' + folder);
@@ -76,8 +77,15 @@ const memoizeHttp = (url) => {
     } else {
         console.log('Already exists: ' + destination);
     }
+
+    return 'files/' + folder + '/' + file;
 }
 
-roots.map(
+const rootFiles = roots.map(
     memoizeHttp
+).filter(
+    (f) => !!f
 );
+
+console.log('Found: ' + rootFiles);
+
