@@ -1,6 +1,6 @@
 const fs = require('fs');
 const { exec } = require('child_process');
-const $ = require('cheerio');
+const cheerio = require('cheerio');
 const md5 = require('md5');
 const url = require('url');
 
@@ -59,7 +59,7 @@ const memoizeHttp = (url) => {
 
     if (!fs.existsSync(destination)) {
         console.log('Getting ' + destination);
-        
+
         const command = `curl -o ${destination} ${url}`; 
 
         exec(command, (error, stdout, stderr) => {
@@ -100,14 +100,73 @@ function resolve(from, to) {
     return resolvedUrl.toString();
   }
   
-const conferences = rootFiles.map(
+requestLimit = 5;
+
+const conferences = [];
+rootFiles.map(
+    ([url, file]) => {
+        console.log('Looking at ' + file + ', for ' + url);
+        const $ = cheerio.load(fs.readFileSync(file));
+        
+        $('.conference a').each(
+            (i, elt) => {
+                console.log(i + ' ' + Object.keys(elt));
+                const ref = $(elt).attr('href');
+
+                const newUrl = resolve(url, ref);
+                const newFile = memoizeHttp(newUrl);
+
+                conferences.push(newFile);
+            }
+        )
+    }
+);
+
+
+  
+requestLimit = 5;
+
+const papers = [];
+conferences.map(
+    ([url, file]) => {
+        console.log('Conference, looking at ' + file + ', for ' + url);
+        const $ = cheerio.load(fs.readFileSync(file));
+        
+        $('.conference a').each(
+            (i, elt) => {
+                console.log(i + ' ' + Object.keys(elt));
+                const ref = $(elt).attr('href');
+                
+                if (ref) {
+                    const newUrl = resolve(url, ref);
+                    const newFile = memoizeHttp(newUrl);
+
+                    papers.push(newFile);
+                }
+            }
+        )
+    }
+);
+
+
+
+/*console.log('Found conferences: ' + conferences);
+
+const papers = conferences.map(
     ([url, file]) =>
-        [url, $.load(fs.readFileSync(file))('.conference a').attr('href')]
+        $.load(fs.readFileSync(file))('div.paper', 'a').attr('href').each(
+            ref => [url, ref]
+        )
+).flatMap(
+    (a) => a
+).filter(
+    ([url, dest]) => !!dest
 ).map(
     ([url, dest]) => resolve(url, dest)
 ).map(
     memoizeHttp
-);
+);      */  
 
-console.log('Found: ' + rootFiles);
+
+console.log('Found papers: ' + papers);
 
