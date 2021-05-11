@@ -32,11 +32,11 @@ const roots = [
     'https://www.lexjansen.com/seugi/'
 ];
 
-let requestLimit = 5;
+let requestLimit = 50;
 
 const memoizeHttp = (url) => {
     if (requestLimit <= 0) {
-        console.log('No more requests');
+        //console.log('No more requests');
         return null;
     }
 
@@ -46,10 +46,10 @@ const memoizeHttp = (url) => {
     const extension = 
         url.match(/[.][a-z]+$/) ?
             url.substring(url.lastIndexOf('.')) :
-            'html';
+            '.html';
    
 
-    const file = code.substr(4) + '.' + extension;
+    const file = code.substr(4) + extension;
 
     if (!fs.existsSync('files/' + folder)) {
         fs.mkdirSync('files/' + folder);
@@ -60,7 +60,7 @@ const memoizeHttp = (url) => {
     if (!fs.existsSync(destination)) {
         console.log('Getting ' + destination);
 
-        const command = `curl -o ${destination} ${url}`; 
+        const command = `curl -o "${destination}" "${url}"`; 
 
         exec(command, (error, stdout, stderr) => {
             if (error) {
@@ -78,10 +78,10 @@ const memoizeHttp = (url) => {
         
         requestLimit--;
     } else {
-        console.log('Already exists: ' + destination);
+        //console.log('Already exists: ' + destination);
     }
 
-    return [url, 'files/' + folder + '/' + file];
+    return [url, destination];
 }
 
 const rootFiles = roots.map(
@@ -100,7 +100,7 @@ function resolve(from, to) {
     return resolvedUrl.toString();
   }
   
-requestLimit = 5;
+requestLimit = 50;
 
 const conferences = [];
 rootFiles.map(
@@ -110,38 +110,15 @@ rootFiles.map(
         
         $('.conference a').each(
             (i, elt) => {
-                console.log(i + ' ' + Object.keys(elt));
                 const ref = $(elt).attr('href');
 
-                const newUrl = resolve(url, ref);
-                const newFile = memoizeHttp(newUrl);
-
-                conferences.push(newFile);
-            }
-        )
-    }
-);
-
-
-  
-requestLimit = 5;
-
-const papers = [];
-conferences.map(
-    ([url, file]) => {
-        console.log('Conference, looking at ' + file + ', for ' + url);
-        const $ = cheerio.load(fs.readFileSync(file));
-        
-        $('.conference a').each(
-            (i, elt) => {
-                console.log(i + ' ' + Object.keys(elt));
-                const ref = $(elt).attr('href');
-                
                 if (ref) {
                     const newUrl = resolve(url, ref);
                     const newFile = memoizeHttp(newUrl);
 
-                    papers.push(newFile);
+                    if (newFile) {
+                        conferences.push(newFile);
+                    }
                 }
             }
         )
@@ -149,6 +126,42 @@ conferences.map(
 );
 
 
+  
+requestLimit = 50;
+
+const papers = [];
+
+console.log("Conferences: " + conferences.length);
+const htmlparser2 = require('htmlparser2');
+
+conferences.map(
+    ([url, file]) => {
+        //console.log('Conference, looking at ' + file + ', for ' + url);
+        //const options = {};
+        const document = fs.readFileSync(file);
+        //const dom = htmlparser2.parseDocument(document, options);
+        const $ = cheerio.load(document);
+        
+        $('#rightpanel .paper a').each(
+            (i, elt) => {
+                const ref = $(elt);                
+                
+                const href = ref.attr('href');
+                if (href) {
+                    //const newUrl = resolve(url, ref);
+                    const newFile = memoizeHttp(href);
+
+                    if (newFile) {
+                        papers.push(newFile);
+                        console.log(href);
+                    }
+                }
+            }
+        )
+    }
+);
+
+//console.log(papers);
 
 /*console.log('Found conferences: ' + conferences);
 
