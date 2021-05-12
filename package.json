@@ -12,6 +12,7 @@
   "dependencies": {
     "cheerio": "^1.0.0-rc.9",
     "md5": "^2.3.0",
+    "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^2.7.570"
   }
 }

@@ -161,25 +161,40 @@ conferences.map(
     }
 );
 
-//console.log(papers);
-
-/*console.log('Found conferences: ' + conferences);
-
-const papers = conferences.map(
-    ([url, file]) =>
-        $.load(fs.readFileSync(file))('div.paper', 'a').attr('href').each(
-            ref => [url, ref]
-        )
-).flatMap(
-    (a) => a
-).filter(
-    ([url, dest]) => !!dest
-).map(
-    ([url, dest]) => resolve(url, dest)
-).map(
-    memoizeHttp
-);      */  
-
+const pdf = require('pdf-parse');
 
 console.log('Found papers: ' + papers);
+
+papers.map(
+  ([url, pdffile]) => {
+    let dataBuffer = fs.readFileSync(pdffile);
+
+    pdf(dataBuffer).then(function(data) { 
+      // number of pages
+      //console.log(data.numpages);
+      // number of rendered pages
+      //console.log(data.numrender);
+      // PDF info
+      console.log(data.info);
+      // PDF metadata
+      console.log(data.metadata); 
+      // PDF.js version
+      // check https://mozilla.github.io/pdf.js/getting_started/
+      //console.log(data.version);
+      // PDF text
+      //console.log(data.text); 
+
+      const textFile = pdffile.replace(/.pdf$/i, '.txt');
+      const jsonFile = pdffile.replace(/.pdf$/i, '.json');
+
+      fs.writeFileSync(textFile, data.text);
+      
+      data.source = url;
+      data.textFile = textFile;
+      data.jsonFile = jsonFile;
+      data.pdfFile = pdffile;
+
+      fs.writeFileSync(jsonFile, data.text);
+   });  
+});
 
